@@ -1,0 +1,56 @@
+##########################
+# this code does NOT work:
+
+SELECT ROUND(AVG(st.lat_n),4)
+FROM station as st
+WHERE (SELECT COUNT(st.lat_n) FROM station) >= abs(
+(SELECT COUNT(lat_n) FROM station WHERE lat_n <= st.lat_n) - 
+(SELECT COUNT(lat_n) FROM station WHERE lat_n >= st.lat_n)    
+)
+
+# in WHERE, (SELECT COUNT(st.lat_n) FROM station) can not be regarded as a dynamic constant. in this case, it will be the count of all lat_n, which makes the inequality is always true
+
+##########################
+# this code is correct:
+
+SELECT ROUND(AVG(tb.lat_n),4)
+FROM (
+SELECT lat_n, COUNT(*) AS cnt
+FROM station
+GROUP BY 1) tb
+WHERE tb.cnt >= abs(
+(SELECT COUNT(lat_n) FROM station WHERE lat_n <= tb.lat_n) - 
+(SELECT COUNT(lat_n) FROM station WHERE lat_n >= tb.lat_n)    
+)
+
+
+
+##########################
+# Alternative method:
+
+SELECT ROUND(AVG(median),4)
+FROM 
+(
+SELECT st.lat_n as median
+FROM station as st
+GROUP BY 1
+HAVING COUNT(st.lat_n) >= abs(
+(SELECT COUNT(lat_n) FROM station WHERE lat_n <= st.lat_n) - 
+(SELECT COUNT(lat_n) FROM station WHERE lat_n >= st.lat_n)    
+)
+)tb
+
+# there should be no aggregating functions in WHERE but it can be HAVING instead
+
+
+
+##########################
+# Alternative method: (SHORTEST)
+
+SELECT ROUND(AVG(st.lat_n),4) as median
+FROM station as st
+GROUP BY st.lat_n
+HAVING COUNT(st.lat_n) >= abs(
+(SELECT COUNT(lat_n) FROM station WHERE lat_n <= st.lat_n) - 
+(SELECT COUNT(lat_n) FROM station WHERE lat_n >= st.lat_n)    
+)
